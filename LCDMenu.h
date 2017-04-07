@@ -29,8 +29,8 @@ public:
   void MenuDown();
   void MenuSelect();
   void MenuBack();
-  void PrintPage( char* pString[], int nLines );
-  void getInput( int iMin, int iMax, int iStart, int iSteps, char **label, uint8_t iLabelLines, int * pInt, uint8_t decPlaces = 1 );
+  void printPage( char* pString[], int nLines );
+  void getInput( int iMin, int iMax, int iStart, int iSteps, char **label, uint8_t iLabelLines, int * pInt, uint8_t decPlaces = 0 );
   void printInput();
   void intIncrease();
   void intDecrease();
@@ -42,6 +42,7 @@ public:
   void clearLCD();
   void setLiveDisp(char * str, int timeout);
   void pauseMenu();
+  void SelectRoot();
 
 private:
   LiquidCrystal_I2C *_LCD;
@@ -72,7 +73,7 @@ private:
   uint8_t _inDecPrec;
 
   //strSelect Vars
-  
+
 };
 
 #endif

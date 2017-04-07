@@ -12,7 +12,7 @@ LCDMenu::LCDMenu(uint8_t LCDAddress, uint8_t LCDChars, uint8_t LCDRows, Rotary *
 
   void LCDMenu::setup(){
     //Serial.println("setup");
-    
+
     //LiquidCrystal_I2C lcd(_LCDAddress,_LCDChars, _LCDRows);  // Set the LCD I2C address
     _LCD = new LiquidCrystal_I2C(_LCDAddress,_LCDChars, _LCDRows);  // Set the LCD I2C address
     _LCD->begin();
@@ -91,7 +91,7 @@ void LCDMenu::poll(){
           //DoMenuAction(MENU_ACTION_TIME);
         default:
           break;
-      } 
+      }
     }else{
       //Serial.println("Suspended Menu");
           switch( menuAction )
@@ -101,7 +101,7 @@ void LCDMenu::poll(){
                 //Serial.println("intIncrease");
                 intIncrease();
                 printInput();
-              }              
+              }
               break;
             case 1:
               if (_decInput){
@@ -149,7 +149,7 @@ menuItem * LCDMenu::firstEntry(){
 void LCDMenu::addMenuRoot( menuItem * root)
 {
   _rootEntry = _selectedEntry = root;
-  
+
 }
 
 LiquidCrystal_I2C * LCDMenu::getLCD()
@@ -248,7 +248,7 @@ void LCDMenu::MenuBack()
   printMenu();
 }
 
-void LCDMenu::PrintPage( char* pString[], int nLines )
+void LCDMenu::printPage( char* pString[], int nLines )
 {
   _suspendMenu = true;
   //Serial.println("PrintPage");
@@ -274,7 +274,7 @@ void LCDMenu::getInput( int iMin, int iMax, int iStart, int iSteps, char **label
   _intMax = iMax;
   _inDecPrec = decPlaces;
   //print the label
-  PrintPage( label, iLabelLines );
+  printPage( label, iLabelLines );
   printInput();
 }
 
@@ -296,7 +296,7 @@ void LCDMenu::setLiveDisp(char * str, int updateRate){
 
 void LCDMenu::intIncrease()
 {
-  //This function may have bugs when m_max is near the MAXINT limit 
+  //This function may have bugs when m_max is near the MAXINT limit
   //but if your UI requires users to input MAXINT numbers, you have bigger problems.
   if( *_intPtr + _intStep <= _intMax )
   {
@@ -319,12 +319,12 @@ void LCDMenu::intDecrease()
 }
 int LCDMenu::getInputInt()
 {
-  return  *_intPtr;  
+  return  *_intPtr;
 }
 
 float LCDMenu::getInputFloat()
 {
-  return  float(*_intPtr)/pow(10,_inDecPrec);  
+  return  float(*_intPtr)/pow(10,_inDecPrec);
 }
 
 void LCDMenu::drawInputRow( char *pString )
@@ -365,5 +365,7 @@ void LCDMenu::pauseMenu(){
   _suspendMenu = true;
 }
 
-
-
+void LCDMenu::SelectRoot()
+{
+  _selectedEntry = _rootEntry;
+}
