@@ -25,7 +25,7 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSI
 #define LCDChars 20
 #define EncoderA D7
 #define EncoderB D6
-#define ButtonPin D8
+#define ButtonPin D1
 
 
 //#include <LiquidCrystal_I2C.h>
@@ -46,6 +46,9 @@ LCDMenu pMenu(LCDAddr, LCDChars, LCDRows, &encoder, &button);
 byte retarrow[8] = {  0x1, 0x1, 0x5, 0x9, 0x1f, 0x8, 0x4};
 int one = 1;
 int zero = 0;
+unsigned long lastUpdate = 0;
+int updateinterval = 250;
+bool menuTimeout = false;
 
 
 
@@ -160,11 +163,60 @@ void setup()
 void loop()
 {
   //Poll the status of the LCDMenu
-  pMenu.poll();
-  if(millis()-g_startMillis > 1500){
-    g_startMillis = millis();
-    dtostrf( ((float)g_startMillis/1000.0), 1, 2, liveBuffer );  
+  if (pMenu.poll()){
+    if (menuTimeout){
+       //pMenu.printMenu();
+    }
+    menuTimeout = false;
+    if(millis()-g_startMillis > 150){
+        g_startMillis = millis();
+        dtostrf( ((float)g_startMillis/1000.0), 1, 2, liveBuffer );  
+    }
+  }else{
+    if (!menuTimeout){
+      menuTimeout = true;
+      //_lcd->noBacklight();
+      printDisplay();
+    }
+    if (millis()-lastUpdate > updateinterval){
+      updateDisplay();
+      lastUpdate = millis();
+    }
+    
   }
+
+}
+
+void printDisplay(){
+  char *page[3] = { " TEMP XXX F RH XX% ", "    BARO X.XXkPa    ", " FL XX.XL  MC XXX% " };
+  page[0][9] = (char)223;
+  pMenu.printPage( page, 3);
+}
+
+void updateDisplay(){
+  char temp[3];
+  char hum[2];
+  char bar[4];
+  char fluid[4];
+  char moist[3];
+
+  int _temp = random(-40,120);
+  int _hum = random(1,100);
+  float _bar = (float)random(0,9)+(float)random(0,99)/100.0;
+  float _fluid = (float)random(0,5)+(float)random(0,99)/100.0;
+  int _moist = random(1,100);
+
+  itoa(_temp,temp,10);
+  itoa(_hum,hum,10);
+  dtostrf( _bar, 1, 2, bar ); 
+  dtostrf( _fluid, 1, 1, fluid ); 
+  itoa(_moist,moist,10);
+
+  pMenu.updatePos(temp,6,0,3);
+  pMenu.updatePos(hum,15,0,2);
+  pMenu.updatePos(bar,9,1,4);
+  pMenu.updatePos(fluid,4,2,4);
+  pMenu.updatePos(moist,14,2,3);
 }
 
 void hygrometerCallback( char* pMenuText, void *pUserData ){
@@ -201,7 +253,7 @@ void heightCallback( char* pMenuText, void *pUserData ){
   _lcd->print("Set Height");
   Serial.println("Set Height");
   char *page[3] = { " TEMP XX.XF  RH XX% ", "    BARO X.XX kPa   ", " FL XX.XL  MC XX.X% " };
-  pMenu.PrintPage( page, 3);
+  pMenu.printPage( page, 3);
   pMenu.setLiveDisp( liveBuffer, 2000);
   pMenu.pauseMenu();
 }

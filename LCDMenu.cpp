@@ -1,12 +1,13 @@
 #include "LCDMenu.h"
 
-LCDMenu::LCDMenu(uint8_t LCDAddress, uint8_t LCDChars, uint8_t LCDRows, Rotary * encoder, OneButton * button)
+LCDMenu::LCDMenu(uint8_t LCDAddress, uint8_t LCDChars, uint8_t LCDRows, Rotary * encoder, OneButton * button, int menuTimeoutMS)
 {
   _LCDAddress = LCDAddress;
   _LCDChars = LCDChars;
   _LCDRows = LCDRows;
   _encoder = encoder;
   _button = button;
+  _menuTimeoutPeriod = menuTimeoutMS;
 }
 
 
@@ -20,7 +21,7 @@ LCDMenu::LCDMenu(uint8_t LCDAddress, uint8_t LCDChars, uint8_t LCDRows, Rotary *
     _suspendMenu = false;
     _decInput = false;
     _liveDisp = false;
-    _lastMillis = millis();
+    _lastInput = _lastMillis = millis();
   }
 
 
@@ -50,8 +51,8 @@ void LCDMenu::printMenu(){
 }
 
 
-
-void LCDMenu::poll(){
+//returns true if menu is active false if timed out
+bool LCDMenu::poll(){
   int menuAction = 0;
 
   unsigned char result = _encoder->process();
@@ -112,6 +113,10 @@ void LCDMenu::poll(){
               break;
             case 2:
               //Serial.println("Select");
+              if (_decInput && _userInputCallback != NULL){
+                _userInputCallback(_intPtr);
+                _userInputCallback = NULL;
+              }
               _decInput = false;
               _suspendMenu = false;
               _liveDisp = false;
@@ -128,6 +133,16 @@ void LCDMenu::poll(){
               break;
            }
    }
+   if (menuAction == 0 || menuAction == 4){
+     if (millis()-_lastInput > _menuTimeoutPeriod  & !_decInput & !_liveDisp){
+       _menuTimeout = true;
+       SelectRoot();
+     }
+   } else {
+       _lastInput = millis();
+       _menuTimeout = false;
+   }
+   return !_menuTimeout;
 }
 
 menuItem * LCDMenu::firstEntry(){
@@ -262,7 +277,7 @@ void LCDMenu::printPage( char* pString[], int nLines )
   }
 }
 
-void LCDMenu::getInput( int iMin, int iMax, int iStart, int iSteps, char **label, uint8_t iLabelLines, int * pInt, uint8_t decPlaces )
+void LCDMenu::getInput( int iMin, int iMax, int iStart, int iSteps, char* label[], uint8_t iLabelLines, int32_t * pInt, uint8_t decPlaces, USER_INPUT_CALLBACK userCB )
 {
    //Serial.println("DoInput");
   _suspendMenu = true;
@@ -273,6 +288,7 @@ void LCDMenu::getInput( int iMin, int iMax, int iStart, int iSteps, char **label
   _intMin = iMin;
   _intMax = iMax;
   _inDecPrec = decPlaces;
+  _userInputCallback = userCB;
   //print the label
   printPage( label, iLabelLines );
   printInput();
@@ -368,4 +384,23 @@ void LCDMenu::pauseMenu(){
 void LCDMenu::SelectRoot()
 {
   _selectedEntry = _rootEntry;
+}
+
+void LCDMenu::updatePos(char* val, uint8_t cursorPos, uint8_t line, uint8_t length){
+    _LCD->setCursor( cursorPos, line );
+    if (strlen(val) > length){
+      for(int x = 0; x < length; x++){
+        _LCD->setCursor( cursorPos+x, line );
+        _LCD->write(val[x]);
+
+      }
+    }else{
+      if (strlen(val) < length){
+        for(int x = 0; x < (length-strlen(val)); x++){
+          _LCD->setCursor( cursorPos+x, line );
+          _LCD->write(' ');
+        }
+    }
+      _LCD->print( val );
+    }
 }

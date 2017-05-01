@@ -23,9 +23,11 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSI
 #define LCDAddr 0x3F
 #define LCDRows 4
 #define LCDChars 20
-#define EncoderA 2
-#define EncoderB 3
-#define ButtonPin 12
+#define EncoderA D7
+#define EncoderB D6
+#define ButtonPin D8
+#define SDA D4
+#define SCL D5
 
 #include "LCDMenu.h"
 
@@ -119,55 +121,56 @@ void setupMenus()
 
   //Create a menuentry for each parent node
   //Stopwatch will be the first entry and therfor will be the root node.
-  MenuEntry * stopwatch = new MenuEntry("Stopwatch", NULL, NULL);
-  MenuEntry * timer = new MenuEntry("Timer", NULL, NULL );
-  MenuEntry * AutoReset = new MenuEntry("AutoReset", NULL, NULL );
+  menuItem * stopwatch = new menuItem("Stopwatch", NULL, NULL);
+  menuItem * timer = new menuItem("Timer", NULL, NULL );
+  menuItem * AutoReset = new menuItem("AutoReset", NULL, NULL );
 
   //Add to stopwatch its siblings (i.e. menu entries on the same level)
   stopwatch->addSibling(timer);
-  stopwatch->addSibling(new MenuEntry( "Credits", NULL, CreditsCallback));
-  stopwatch->addSibling(new MenuEntry( "Draw Smiley", NULL, SmileyCallback));
+  stopwatch->addSibling(new menuItem( "Credits", NULL, CreditsCallback));
+  stopwatch->addSibling(new menuItem( "Draw Smiley", NULL, SmileyCallback));
 
   //Add to stopwatch each of its child entries
-  stopwatch->addChild( new MenuEntry("Start", NULL, WatchStartCallback) );
-  stopwatch->addChild( new MenuEntry("Stop", NULL, WatchStopCallback ) );
-  stopwatch->addChild( new MenuEntry("Reset", NULL, WatchResetCallback) );
-  stopwatch->addChild( new MenuEntry("Back", (void *) &g_menuLCD, MenuEntry_BackCallbackFunc));
+  stopwatch->addChild( new menuItem("Start", NULL, WatchStartCallback) );
+  stopwatch->addChild( new menuItem("Stop", NULL, WatchStopCallback ) );
+  stopwatch->addChild( new menuItem("Reset", NULL, WatchResetCallback) );
+  stopwatch->addChild( new menuItem("Back", (void *) &g_menuLCD, menuItem_BackCallbackFunc));
 
 
   //Add to autoreset each of its child entries
-  AutoReset->addChild( new MenuEntry( "Turn Reset On",  (void *) (&g_autoReset), MenuEntry_BoolTrueCallbackFunc ) );
-  AutoReset->addChild( new MenuEntry( "Turn Reset Off", (void *) (&g_autoReset), MenuEntry_BoolFalseCallbackFunc ) );
-  AutoReset->addChild( new MenuEntry("Back", (void *) &g_menuLCD, MenuEntry_BackCallbackFunc) );
+  AutoReset->addChild( new menuItem( "Turn Reset On",  (void *) (&g_autoReset), menuItem_BoolTrueCallbackFunc ) );
+  AutoReset->addChild( new menuItem( "Turn Reset Off", (void *) (&g_autoReset), menuItem_BoolFalseCallbackFunc ) );
+  AutoReset->addChild( new menuItem("Back", (void *) &g_menuLCD, menuItem_BackCallbackFunc) );
 
   //Add to timer each of its child entries
-  timer->addChild( new MenuEntry("Set Time", NULL, SetTimeCallback ) );
+  timer->addChild( new menuItem("Set Time", NULL, SetTimeCallback ) );
   timer->addChild(AutoReset);
-  timer->addChild( new MenuEntry( "Countdown Start", NULL, TimerStartCallback) );
-  timer->addChild( new MenuEntry( "Countdown Stop", NULL, TimerStopCallback) );
-  timer->addChild( new MenuEntry("Back", (void *) &g_menuLCD, MenuEntry_BackCallbackFunc) );
+  timer->addChild( new menuItem( "Countdown Start", NULL, TimerStartCallback) );
+  timer->addChild( new menuItem( "Countdown Stop", NULL, TimerStopCallback) );
+  timer->addChild( new menuItem("Back", (void *) &g_menuLCD, menuItem_BackCallbackFunc) );
 
   //Set the root entry
   g_menuLCD.addMenuRoot( stopwatch );
 
   //Create LCD custom chars
-  g_menuLCD.getLCD()->createChar( 0, g_smiley );  //Smiley face
+  g_menuLCD.getLCD()->createChar( 2, g_smiley );  //Smiley face
   g_menuLCD.getLCD()->createChar( 1, g_frown );   //Frowney face
-   g_menuLCD.getLCD()->createChar( 2, retarrow ); //Return Arrow
+   g_menuLCD.getLCD()->createChar( 0, retarrow ); //Return Arrow
 
   //Make sure the menu is drawn correctly after all changes are done
   g_menuLCD.SelectRoot();
-  g_menuLCD.PrintMenu();
+  g_menuLCD.printMenu();
 
 }
 
 
 void setup()
 {
+  Wire.begin(SDA,SCL);
   Serial.begin(115200);
-  Serial.print("Ready.");
-
-  //Setup the Menus
+  Serial.println("Ready.");
+  pinMode(ButtonPin,INPUT_PULLUP);
+  g_menuLCD.setup();
   setupMenus();
 }
 
@@ -176,7 +179,7 @@ void setup()
 void loop()
 {
   //Poll the status of the LCDMenu
-  g_menuLCD.Poll();
+  g_menuLCD.poll();
 
 
   dtostrf( ((float)(millis()-g_startMillis))/1000, 1, 2, g_timeElapsed );
@@ -194,9 +197,10 @@ void WatchStartCallback( char* pMenuText, void *pUserData )
   dtostrf( (float)0, 1, 2, g_timeElapsed );
   //liveDisplay is an updateable value that updates while the display is currenty up.  In this case it will
   //continually update the elapsed time on the screen after the button is pressed.
-  g_menuLCD.liveDisplay( &pTextLines[0], 1, g_timeElapsed );
+  g_menuLCD.printPage(pTextLines, 2);
+  g_menuLCD.setLiveDisp(g_timeElapsed, 250 );
 
-  g_menuLCD.holdDisplay();  // hold display waits for user input before returning to the menu.
+  g_menuLCD.pauseMenu();
 
 }
 
@@ -208,9 +212,10 @@ void WatchStopCallback( char* pMenuText, void *pUserData )
 
   char strSeconds[20];
   dtostrf( ((float)(g_stopMillis-g_startMillis))/1000, 1, 2, strSeconds );
+  Serial.println(strSeconds);
   char *pTextLines[2] = {"Elapsed Time", strSeconds };
-  g_menuLCD.PrintPage( pTextLines, 2, 3 );  // print page displays text on the screen
-  g_menuLCD.holdDisplay();
+  g_menuLCD.printPage( pTextLines, 2 );  // print page displays text on the screen
+  g_menuLCD.pauseMenu();
 }
 
 //This is a sample callback funtion for when a menu item with no children (aka command) is selected
@@ -219,8 +224,8 @@ void WatchResetCallback( char* pMenuText, void *pUserData )
   g_startMillis = 0;
   g_stopMillis = 0;
   char *pTextLines[2] = {"Clock reset", "" };
-  g_menuLCD.PrintPage( pTextLines, 2, 3 );
-  g_menuLCD.holdDisplay();
+  g_menuLCD.printPage( pTextLines, 2);
+  g_menuLCD.pauseMenu();
 }
 
 //This callback uses the built-in Input routine to request input of a integer number from the
@@ -238,7 +243,7 @@ void SetTimeCallback( char* pMenuText, void *pUserData )
   int iStep = 1;
 
   //Do Input will select input from the user.
-  g_menuLCD.DoInput( iMin, iMax, iStart, iStep, &pLabel, iNumLabelLines, &g_timerTime );
+  g_menuLCD.getInput( iMin, iMax, iStart, iStep, &pLabel, iNumLabelLines, &g_timerTime );
 }
 
 
@@ -251,8 +256,8 @@ void TimerStartCallback( char* pMenuText, void *pUserData )
   char strSeconds[50];
   itoa( g_timerTime, strSeconds, 10 );
   char *pTextLines[2] = {"Go!", strSeconds };
-  g_menuLCD.PrintPage( pTextLines, 2, 5 );
-  g_menuLCD.holdDisplay();
+  g_menuLCD.printPage( pTextLines, 2 );
+  g_menuLCD.pauseMenu();
 
 }
 
@@ -261,17 +266,23 @@ void TimerStartCallback( char* pMenuText, void *pUserData )
 void TimerStopCallback( char* pMenuText, void *pUserData )
 {
   g_timerRunning = false;
+  char strSeconds[50];
+  itoa( g_timerTime, strSeconds, 10 );
+  char *pTextLines[2] = {"Stop!", strSeconds };
+  g_menuLCD.printPage( pTextLines, 2 );
+  g_menuLCD.pauseMenu();
 }
 
 void CreditsCallback( char* pMenuText, void *pUserData )
 {
   char *pTextLines[4] = {"Jason Mishou ", "TXRX LABS", "github.com/JMishou","/LCDMenu" };
-  g_menuLCD.PrintPage( pTextLines, 4, -1 );
+  g_menuLCD.printPage( pTextLines, 4 );
   delay(5000);
   char *pTextLines2[4] = {"Original code found", "on github @","github.com","/DavidAndrews"};
 //https://github.com/DavidAndrews/Arduino_LCD_Menu
-  g_menuLCD.PrintPage( pTextLines2, 4, -1 );
+  g_menuLCD.printPage( pTextLines2, 4 );
     delay(5000);
+    g_menuLCD.printMenu();
 }
 
 
@@ -279,15 +290,16 @@ void SmileyCallback( char* pMenuText, void *pUserData )
 {
   for( int i = 0; i < 10 ; ++i )
   {
-    g_menuLCD.ClearLCD();
+    g_menuLCD.clearLCD();
     g_menuLCD.getLCD()->setCursor( 8,0 );
-    g_menuLCD.getLCD()->print( (char)0 );
+    g_menuLCD.getLCD()->print( (char)2 );
     delay(500);
-    g_menuLCD.ClearLCD();
+    g_menuLCD.clearLCD();
     g_menuLCD.getLCD()->setCursor( 8,0 );
     g_menuLCD.getLCD()->print( (char)1 );
     delay(500);
   }
+  g_menuLCD.printMenu();
 }
 
 
