@@ -10,7 +10,7 @@
 
 enum MENU_ACTION { MENU_ACTION_UP, MENU_ACTION_DOWN, MENU_ACTION_SELECT, MENU_ACTION_BACK, MENU_ACTION_TIME };
 
-typedef void (* USER_INPUT_CALLBACK)( int32_t * selectedVal );
+typedef void (* USER_INPUT_CALLBACK)( int * selectedVal );
 
 class LCDMenu
 {
@@ -30,7 +30,7 @@ public:
   void MenuSelect();
   void MenuBack();
   void printPage( char* pString[], int nLines );
-  void getInput( int iMin, int iMax, int iStart, int iSteps, char *label[], uint8_t iLabelLines, int32_t * pInt, uint8_t decPlaces = 0, USER_INPUT_CALLBACK userCB = NULL );
+  void getInput( int iMin, int iMax, int iStart, int iSteps, char *label[], uint8_t iLabelLines, int * pInt, uint8_t decPlaces = 0, USER_INPUT_CALLBACK userCB = NULL );
   void printInput();
   void intIncrease();
   void intDecrease();
@@ -74,7 +74,7 @@ private:
   int _intMin;
   int _intMax;
   int _intStep;
-  int32_t *_intPtr;
+  int *_intPtr;
   uint8_t _inDecPrec;
 
   //strSelect Vars

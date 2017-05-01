@@ -277,7 +277,7 @@ void LCDMenu::printPage( char* pString[], int nLines )
   }
 }
 
-void LCDMenu::getInput( int iMin, int iMax, int iStart, int iSteps, char* label[], uint8_t iLabelLines, int32_t * pInt, uint8_t decPlaces, USER_INPUT_CALLBACK userCB )
+void LCDMenu::getInput( int iMin, int iMax, int iStart, int iSteps, char* label[], uint8_t iLabelLines, int * pInt, uint8_t decPlaces, USER_INPUT_CALLBACK userCB )
 {
    //Serial.println("DoInput");
   _suspendMenu = true;

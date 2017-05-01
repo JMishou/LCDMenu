@@ -23,11 +23,10 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSI
 #define LCDAddr 0x3F
 #define LCDRows 4
 #define LCDChars 20
-#define EncoderA D7
-#define EncoderB D6
-#define ButtonPin D8
-#define SDA D4
-#define SCL D5
+#define EncoderA 5
+#define EncoderB 6
+#define ButtonPin 7
+#define LEDPin 13
 
 #include "LCDMenu.h"
 
@@ -129,6 +128,7 @@ void setupMenus()
   stopwatch->addSibling(timer);
   stopwatch->addSibling(new menuItem( "Credits", NULL, CreditsCallback));
   stopwatch->addSibling(new menuItem( "Draw Smiley", NULL, SmileyCallback));
+  stopwatch->addSibling(new menuItem( "Blink LED", NULL,setBlinkCallback));
 
   //Add to stopwatch each of its child entries
   stopwatch->addChild( new menuItem("Start", NULL, WatchStartCallback) );
@@ -166,10 +166,11 @@ void setupMenus()
 
 void setup()
 {
-  Wire.begin(SDA,SCL);
+  Wire.begin();
   Serial.begin(115200);
   Serial.println("Ready.");
   pinMode(ButtonPin,INPUT_PULLUP);
+  pinMode(LEDPin,OUTPUT);
   g_menuLCD.setup();
   setupMenus();
 }
@@ -230,6 +231,34 @@ void WatchResetCallback( char* pMenuText, void *pUserData )
 
 //This callback uses the built-in Input routine to request input of a integer number from the
 //user.  Control will pass to the DoInput function until the user finishes.  the g_timerTime will be set to the
+//value the user selects.  This example also uses a callback to trigger an action once the user has selected an input.
+void setBlinkCallback( char* pMenuText, void *pUserData )
+{
+  char *pLabel[3] = {"Set the number of", "blinks for the LED", "to flash"};
+  int iNumLabelLines = 3;
+  int iMin = 1;
+  int iMax = 100;
+  int iStart = g_timerTime;
+  //Each user input action (such as a turn of rotary enocoder or push of button
+  //will step this amount
+  int iStep = 1;
+
+  //Do Input will select input from the user.
+  g_menuLCD.getInput( iMin, iMax, iStart, iStep, pLabel, iNumLabelLines, &g_timerTime, 0, flashLEDCallback );
+}
+
+void flashLEDCallback(int * val){
+
+  for (int x = *val * 2; x > 0; x--){
+    digitalWrite(LEDPin,!digitalRead(LEDPin));
+    delay(150);
+  }
+  
+}
+
+
+//This callback uses the built-in Input routine to request input of a integer number from the
+//user.  Control will pass to the DoInput function until the user finishes.  the g_timerTime will be set to the
 //value the user selects.
 void SetTimeCallback( char* pMenuText, void *pUserData )
 {
@@ -279,7 +308,6 @@ void CreditsCallback( char* pMenuText, void *pUserData )
   g_menuLCD.printPage( pTextLines, 4 );
   delay(5000);
   char *pTextLines2[4] = {"Original code found", "on github @","github.com","/DavidAndrews"};
-//https://github.com/DavidAndrews/Arduino_LCD_Menu
   g_menuLCD.printPage( pTextLines2, 4 );
     delay(5000);
     g_menuLCD.printMenu();
