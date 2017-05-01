@@ -15,7 +15,7 @@ typedef void (* USER_INPUT_CALLBACK)( int * selectedVal );
 class LCDMenu
 {
 public:
-  LCDMenu(uint8_t, uint8_t, uint8_t, Rotary *, OneButton *, int menuTimeoutMS = 5000);
+  LCDMenu(uint8_t, uint8_t, uint8_t, Rotary *, OneButton *, int menuTimeoutMS = NULL);
   void setup();
   void printMenu();
   bool poll();

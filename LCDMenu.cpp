@@ -134,10 +134,12 @@ bool LCDMenu::poll(){
            }
    }
    if (menuAction == 0 || menuAction == 4){
-     if (millis()-_lastInput > _menuTimeoutPeriod  & !_decInput & !_liveDisp){
-       _menuTimeout = true;
-       SelectRoot();
-     }
+     if (_menuTimeoutPeriod){
+         if (millis()-_lastInput > _menuTimeoutPeriod  & !_decInput & !_liveDisp){
+           _menuTimeout = true;
+           SelectRoot();
+         }
+    }  
    } else {
        _lastInput = millis();
        _menuTimeout = false;
